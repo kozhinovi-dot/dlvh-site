@@ -3,10 +3,13 @@
 Static one-page corporate site. No build step, no dependencies, no framework.
 Plain HTML + CSS + a single vanilla JS file.
 
+**Live:** https://dlvh.ae — deployed from this repository via GitHub Pages.
+
 ```
 dlvh-site/
 ├── index.html            one-pager: hero, about, services, contact
 ├── privacy.html          privacy policy
+├── CNAME                 custom domain for GitHub Pages (dlvh.ae)
 ├── robots.txt
 ├── sitemap.xml
 ├── IMAGE_SOURCES.md      photo attribution (Unsplash)
@@ -14,7 +17,7 @@ dlvh-site/
     ├── styles.css
     ├── main.js           form handling + scroll reveal
     ├── favicon.svg
-    └── images/           4 photographs
+    └── images/           2 photographs
 ```
 
 ## Local preview
@@ -25,119 +28,116 @@ cd /Users/ilya/Booking/dlvh-site && python3 -m http.server 8823
 
 Then open http://127.0.0.1:8823
 
----
+## Publishing changes
 
-## 1. Deploy to Cloudflare Pages (free)
-
-The site is static, so upload is enough — no Git repository required.
-
-1. Sign in at https://dash.cloudflare.com → **Workers & Pages** → **Create** → **Pages** → **Upload assets**.
-2. Project name: `dlvh`. Drag the **contents** of `dlvh-site/` into the upload area
-   (the folder contents, not the folder itself — `index.html` must sit at the root).
-3. Deploy. You get a working `dlvh.pages.dev` URL immediately.
-
-To publish an update later, open the project → **Create deployment** → upload the changed files again.
-
-## 2. Move the domain's DNS to Cloudflare
-
-`dlvh.ae` currently uses AEserver's nameservers (`ns1/ns2/ns3.rrpproxy.net`) and its
-A record points at a parking page. Moving DNS to Cloudflare puts the site and the
-email records in one place.
-
-1. In Cloudflare: **Add a domain** → `dlvh.ae` → choose the **Free** plan.
-2. Cloudflare gives you two nameservers, e.g. `xxx.ns.cloudflare.com`.
-3. In the AEserver control panel, open the domain and replace the existing
-   nameservers with the two from Cloudflare. Save.
-4. Propagation usually takes 15 minutes to a few hours. Check with:
+Edit files, then:
 
 ```bash
-dig +short dlvh.ae NS
+cd /Users/ilya/Booking/dlvh-site && git add -A && git commit -m "describe the change" && git push
 ```
 
-The domain stays registered with AEserver — only DNS hosting moves.
-
-## 3. Point the domain at the site
-
-In the Pages project → **Custom domains** → **Set up a domain**:
-
-- add `dlvh.ae`
-- add `www.dlvh.ae`
-
-Cloudflare creates the DNS records and issues the TLS certificate automatically.
+GitHub Pages rebuilds within about a minute. Pushing uses the SSH key
+`~/.ssh/github_ed25519`, already registered with the `kozhinovi-dot` account.
 
 ---
 
-## 4. Email: info@dlvh.ae (free)
+## Current infrastructure (as deployed)
 
-**Receiving** — Cloudflare Email Routing, free, unlimited addresses.
+| Piece | Where | Cost |
+|---|---|---|
+| Domain registrar | AEserver | paid annually (AED 145) |
+| DNS | AEserver panel (nameservers `ns1/ns2/ns3.rrpproxy.net`) | included |
+| Hosting | GitHub Pages, repo `kozhinovi-dot/dlvh-site` | free |
+| TLS certificate | GitHub, auto-issued and auto-renewed | free |
+| Email | **not yet working** — see below | — |
 
-1. Cloudflare dashboard → the `dlvh.ae` zone → **Email** → **Email Routing** → **Get started**.
-2. Let it add the required MX and SPF records automatically.
-3. Add a destination address (your personal Gmail) and confirm it from the verification email.
-4. Create the route: `info@dlvh.ae` → your Gmail.
+Cloudflare is not used. It was the original plan, but AEserver's own DNS panel
+covers what the site needs, so the nameservers were left untouched.
 
-Test by sending a message to `info@dlvh.ae` from any other address.
-More addresses later (`booking@`, `accounts@`) are just extra routes — no extra cost.
+### DNS records currently set
 
-**Sending** — Gmail "Send mail as".
+| Host | Type | Value |
+|---|---|---|
+| `@` | A | 185.199.108.153 |
+| `@` | A | 185.199.109.153 |
+| `@` | A | 185.199.110.153 |
+| `@` | A | 185.199.111.153 |
+| `www` | CNAME | kozhinovi-dot.github.io |
 
-1. Gmail → **Settings** → **Accounts and Import** → **Send mail as** → **Add another email address**.
-2. Name: `Diamond Line Vacation Homes Rental`, address: `info@dlvh.ae`.
-   Leave **Treat as an alias** ticked.
-3. Choose to send through Gmail's servers (no SMTP credentials needed).
-4. Google emails a confirmation code to `info@dlvh.ae`; it arrives in your Gmail via
-   the route from the previous step. Enter the code.
-5. Set `info@dlvh.ae` as the default sending address if you want replies to come from it.
-
-You can now read and send from `info@dlvh.ae` in Gmail on desktop and on the phone.
-
-### Deliverability note
-
-Sending through Gmail's own servers means outgoing mail is DKIM-signed by `gmail.com`,
-not by `dlvh.ae`, so DMARC alignment for the domain does not pass. In practice mail is
-delivered normally to Gmail and most providers; Outlook and Yahoo are the ones that
-occasionally treat it as suspicious.
-
-Do **not** publish a strict DMARC policy while sending this way. Either publish nothing,
-or a monitoring-only record — add a TXT record in Cloudflare:
-
-| Name | Type | Content |
-|------|------|---------|
-| `_dmarc` | TXT | `v=DMARC1; p=none; rua=mailto:info@dlvh.ae` |
-
-If mail to Outlook or Yahoo starts landing in spam, the fix is to route outgoing mail
-through a free SMTP relay that signs with `dlvh.ae` (Brevo, 300 messages/day, free) and
-point Gmail's "Send mail as" at that relay instead of Gmail's servers. Nothing else changes.
+The four A records are GitHub Pages' anycast addresses. Do not delete the `CNAME`
+file from the repository — GitHub Pages reads the custom domain from it, and
+removing it unsets the domain.
 
 ---
 
-## 5. Contact form
+## Email: info@dlvh.ae — OUTSTANDING
 
-The form currently has **no delivery key set**, so submitting it opens the visitor's own
-mail application with the message pre-filled to `info@dlvh.ae`. That works, but many
-visitors have no mail client configured, so finish this step once email is live:
+**Status: not working.** Nothing sent to `info@dlvh.ae` is delivered anywhere.
 
-1. Go to https://web3forms.com, enter `info@dlvh.ae`, and request an access key.
-   The key arrives by email. No account, free, unlimited submissions.
-2. Open `assets/main.js` and paste it:
+AEserver's built-in **Email Forwarding** (domain → Email Forwarding in the client
+area) silently discards the record: the form accepts `info` → destination address,
+reports nothing on save, and the field is empty again after a reload. Tried three
+times, including plain keyboard entry rather than scripted input. No MX record is
+created for the domain (`dig dlvh.ae MX` returns nothing). The underlying DNS
+platform does support forwarding — it creates the MX automatically via an internal
+X-SMTP pseudo-record — so this is a fault in AEserver's panel, not a
+misconfiguration.
 
-```js
-var FORM_ACCESS_KEY = 'your-key-here';
-```
+Two ways forward:
 
-3. Re-upload to Cloudflare Pages.
+**A. Support ticket to AEserver.** Their feature, their bug. Ask them to enable
+email forwarding for `dlvh.ae` to the destination mailbox. Costs nothing, but
+depends on their response time.
 
-The key is a public submission token — it only allows sending to the address that
-registered it, so it is safe in frontend code. The form already includes a honeypot
-field against bots.
+**B. Cloudflare Email Routing.** Free, unlimited addresses, reliable. Requires a
+Cloudflare account and moving the domain's nameservers from AEserver to Cloudflare
+— the site's A/CNAME records would move across with it. About 15 minutes of work
+once an account exists, plus nameserver propagation.
+
+Either way, **sending** is then set up the same:
+
+1. Gmail → Settings → Accounts and Import → Send mail as → Add another email address.
+2. Name `Diamond Line Vacation Homes Rental`, address `info@dlvh.ae`, keep
+   "Treat as an alias" ticked.
+3. Send through Gmail's servers (no SMTP credentials).
+4. Google mails a confirmation code to `info@dlvh.ae`; it arrives once receiving works.
+
+Note on deliverability: sending via Gmail's servers means outgoing mail is
+DKIM-signed by `gmail.com`, not `dlvh.ae`, so DMARC does not align. Delivery to
+Gmail and most providers is fine; Outlook and Yahoo are occasionally strict. Do not
+publish a strict DMARC policy while sending this way — leave it unset, or use
+`v=DMARC1; p=none`. If spam filtering becomes a problem, route outgoing mail through
+a free SMTP relay that signs with `dlvh.ae` (Brevo, 300 messages/day) and point
+Gmail's "Send mail as" at that relay.
+
+---
+
+## Contact form — OUTSTANDING
+
+The form has **no delivery key set**, so submitting it opens the visitor's own mail
+application with the message pre-filled to `info@dlvh.ae`. Functional, but many
+visitors have no mail client configured.
+
+To finish (do this after email receiving works, since the key arrives by email):
+
+1. https://web3forms.com → enter `info@dlvh.ae` → request an access key. Free,
+   unlimited submissions, no account.
+2. In `assets/main.js`: `var FORM_ACCESS_KEY = 'your-key-here';`
+3. Commit and push.
+
+The key is a public submission token — it only permits sending to the address that
+registered it, so it is safe in frontend code. The form already has a honeypot field.
 
 ---
 
 ## Editorial note
 
-The copy is deliberately plain: what the company is, what it does, where it is, how to
-reach it. No claims about standards, licensing or quality, no selling. If anything is
-added later, keep it to verifiable facts — the point of the site is that someone who
-receives an email from `info@dlvh.ae` can check that the company exists.
+The copy is deliberately plain: what the company is, what it does, where it is, how
+to reach it. No claims about standards, licensing or quality, no selling. If anything
+is added later, keep it to verifiable facts — the point of the site is that someone
+who receives an email from `info@dlvh.ae` can check that the company exists.
+
+No phone number appears anywhere on the site, by request. Do not add one — or a
+WhatsApp button — without asking.
 
 Optional, if wanted: the office unit number in Opus by Omniyat.
