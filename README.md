@@ -74,6 +74,46 @@ removing it unsets the domain.
 
 **Status: not working.** Nothing sent to `info@dlvh.ae` is delivered anywhere.
 
+### Decision: Google Workspace (5 Aug 2026)
+
+Chosen over free forwarding so that outgoing mail is DKIM-signed by `dlvh.ae` and DMARC
+aligns. Two false starts so far, both now understood:
+
+1. **Signed up on the personal Gmail** (`kozhinov.i@gmail.com`) — Google refuses custom
+   domains for members of a **family group**. That account is the family *manager*, with a
+   supervised child account in the group, so the only offered escape was deleting the whole
+   family group. That would drop Family Link parental controls and impose a 12-month block
+   on joining any family group — not an acceptable trade for an email address. Rejected.
+   The Business Standard trial from that attempt was cancelled and its org deleted; no
+   charge was made.
+2. **Fresh corporate signup** (the correct route: *Create a new account*, not *Continue with
+   this account*) — reached the username/password step, then Google began reporting
+   **"this domain name is already in use"** for `dlvh.ae`. The claim most likely comes from
+   the incomplete signup itself or the just-deleted org. Google holds a released domain for
+   up to 24 hours (7 days if bought through a reseller) before it can be attached elsewhere.
+
+**Next step:** retry the signup after ~24 hours at
+https://workspace.google.com/business/signup/welcome → *Create a new account* → existing
+domain `dlvh.ae` → username `info` → **Business Starter**, not Standard (the first attempt
+defaulted to Standard at €16.20/user/month; Starter is roughly half).
+
+If it is still blocked after 24 hours: reset the password of the stranded account — recovery
+goes to `kozhinov.i@gmail.com` — and remove the domain from it, or use Google's contact form
+(48-hour response). See https://support.google.com/a/answer/80610
+
+Once the account exists, remaining work is DNS only: verification TXT, MX to Google, SPF,
+DKIM, and DMARC at `p=none`.
+
+**Unresolved risk:** AEserver's DNS panel offers TXT only as "SPF (txt)", and Google's DKIM
+key runs to roughly 400 characters. Whether the field accepts it is untested — the AEserver
+session expired before the test could run twice. If it does not fit, move the nameservers to
+Cloudflare: free, and the site's A/CNAME records move across with it.
+
+Note: the AEserver client-area session expires after a few minutes of inactivity and has to
+be signed in again by hand.
+
+### Why the registrar's own forwarding was abandoned
+
 AEserver's built-in **Email Forwarding** (domain → Email Forwarding in the client
 area) silently discards the record: the form accepts `info` → destination address,
 reports nothing on save, and the field is empty again after a reload. Tried three
@@ -83,32 +123,15 @@ platform does support forwarding — it creates the MX automatically via an inte
 X-SMTP pseudo-record — so this is a fault in AEserver's panel, not a
 misconfiguration.
 
-Two ways forward:
+A support ticket to AEserver would be the free route, since the bug is theirs. It was not
+pursued because Google Workspace was chosen instead — forwarding would still leave outgoing
+mail signed by `gmail.com` rather than `dlvh.ae`.
 
-**A. Support ticket to AEserver.** Their feature, their bug. Ask them to enable
-email forwarding for `dlvh.ae` to the destination mailbox. Costs nothing, but
-depends on their response time.
-
-**B. Cloudflare Email Routing.** Free, unlimited addresses, reliable. Requires a
-Cloudflare account and moving the domain's nameservers from AEserver to Cloudflare
-— the site's A/CNAME records would move across with it. About 15 minutes of work
-once an account exists, plus nameserver propagation.
-
-Either way, **sending** is then set up the same:
-
-1. Gmail → Settings → Accounts and Import → Send mail as → Add another email address.
-2. Name `Diamond Line Vacation Homes Rental`, address `info@dlvh.ae`, keep
-   "Treat as an alias" ticked.
-3. Send through Gmail's servers (no SMTP credentials).
-4. Google mails a confirmation code to `info@dlvh.ae`; it arrives once receiving works.
-
-Note on deliverability: sending via Gmail's servers means outgoing mail is
-DKIM-signed by `gmail.com`, not `dlvh.ae`, so DMARC does not align. Delivery to
-Gmail and most providers is fine; Outlook and Yahoo are occasionally strict. Do not
-publish a strict DMARC policy while sending this way — leave it unset, or use
-`v=DMARC1; p=none`. If spam filtering becomes a problem, route outgoing mail through
-a free SMTP relay that signs with `dlvh.ae` (Brevo, 300 messages/day) and point
-Gmail's "Send mail as" at that relay.
+Fallback if Workspace stays blocked: **Cloudflare Email Routing** — free, unlimited
+addresses, reliable. Needs a Cloudflare account and the nameservers moved from AEserver;
+the site's A/CNAME records move across with it. Receiving would work, but sending from
+Gmail as an alias would still be DKIM-signed by `gmail.com`, so DMARC would not align —
+keep DMARC unset or at `p=none` in that case.
 
 ---
 
