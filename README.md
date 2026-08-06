@@ -30,8 +30,6 @@ Then open http://127.0.0.1:8823
 
 ## Publishing changes
 
-Edit files, then:
-
 ```bash
 cd /Users/ilya/Booking/dlvh-site && git add -A && git commit -m "describe the change" && git push
 ```
@@ -41,97 +39,75 @@ GitHub Pages rebuilds within about a minute. Pushing uses the SSH key
 
 ---
 
-## Current infrastructure (as deployed)
+## Infrastructure
 
 | Piece | Where | Cost |
 |---|---|---|
-| Domain registrar | AEserver | paid annually (AED 145) |
+| Domain registrar | AEserver | AED 145/year |
 | DNS | AEserver panel (nameservers `ns1/ns2/ns3.rrpproxy.net`) | included |
 | Hosting | GitHub Pages, repo `kozhinovi-dot/dlvh-site` | free |
 | TLS certificate | GitHub, auto-issued and auto-renewed | free |
-| Email | **not yet working** — see below | — |
+| Email | Google Workspace Business Starter, 2 users | €8.10/user/month |
 
-Cloudflare is not used. It was the original plan, but AEserver's own DNS panel
-covers what the site needs, so the nameservers were left untouched.
+Cloudflare is not used — AEserver's own DNS panel covers everything, so the
+nameservers were left untouched.
 
-### DNS records currently set
+### DNS records
 
-| Host | Type | Value |
-|---|---|---|
-| `@` | A | 185.199.108.153 |
-| `@` | A | 185.199.109.153 |
-| `@` | A | 185.199.110.153 |
-| `@` | A | 185.199.111.153 |
-| `www` | CNAME | kozhinovi-dot.github.io |
+| Host | Type | Value | Purpose |
+|---|---|---|---|
+| `@` | A | 185.199.108.153 | GitHub Pages |
+| `@` | A | 185.199.109.153 | GitHub Pages |
+| `@` | A | 185.199.110.153 | GitHub Pages |
+| `@` | A | 185.199.111.153 | GitHub Pages |
+| `www` | CNAME | kozhinovi-dot.github.io | GitHub Pages |
+| `@` | MX (prio 1) | smtp.google.com | inbound mail to Google |
+| `@` | TXT | `google-site-verification=…` | domain ownership |
+| `@` | TXT | `v=spf1 include:_spf.google.com ~all` | SPF |
+| `google._domainkey` | TXT | `v=DKIM1; k=rsa; p=…` (2048-bit) | DKIM |
+| `_dmarc` | TXT | `v=DMARC1; p=none; rua=mailto:dlvh@dlvh.ae` | DMARC, monitoring only |
 
-The four A records are GitHub Pages' anycast addresses. Do not delete the `CNAME`
-file from the repository — GitHub Pages reads the custom domain from it, and
-removing it unsets the domain.
+Do not delete the `CNAME` file from the repository — GitHub Pages reads the custom
+domain from it, and removing it unsets the domain.
+
+The AEserver panel labels TXT as "SPF (txt)", which is misleading: it stores a plain
+TXT record. It handles the full 2048-bit DKIM key correctly, splitting it into two
+strings of ≤255 characters as the standard requires. Its client-area session expires
+after a few minutes of inactivity and has to be signed in again by hand.
 
 ---
 
-## Email: info@dlvh.ae — OUTSTANDING
+## Email
 
-**Status: not working.** Nothing sent to `info@dlvh.ae` is delivered anywhere.
+Two mailboxes, both active:
 
-### Decision: Google Workspace (5 Aug 2026)
+- `info@dlvh.ae` — the address published on the site
+- `dlvh@dlvh.ae` — Workspace administrator
 
-Chosen over free forwarding so that outgoing mail is DKIM-signed by `dlvh.ae` and DMARC
-aligns. Two false starts so far, both now understood:
+Both are separate licensed users. If a second mailbox is not actually wanted,
+`info@` could instead be a free alias on `dlvh@`, halving the bill — Google allows up
+to 30 aliases per user at no cost.
 
-1. **Signed up on the personal Gmail** (`kozhinov.i@gmail.com`) — Google refuses custom
-   domains for members of a **family group**. That account is the family *manager*, with a
-   supervised child account in the group, so the only offered escape was deleting the whole
-   family group. That would drop Family Link parental controls and impose a 12-month block
-   on joining any family group — not an acceptable trade for an email address. Rejected.
-   The Business Standard trial from that attempt was cancelled and its org deleted; no
-   charge was made.
-2. **Fresh corporate signup** (the correct route: *Create a new account*, not *Continue with
-   this account*) — reached the username/password step, then Google began reporting
-   **"this domain name is already in use"** for `dlvh.ae`. The claim most likely comes from
-   the incomplete signup itself or the just-deleted org. Google holds a released domain for
-   up to 24 hours (7 days if bought through a reseller) before it can be attached elsewhere.
+Outgoing mail is DKIM-signed by `dlvh.ae` itself, so DMARC aligns and deliverability
+does not depend on Gmail's reputation. DMARC is deliberately at `p=none` for now:
+it collects reports without rejecting anything. Tighten to `p=quarantine` only after
+the reports at `dlvh@dlvh.ae` come back clean for a few weeks.
 
-**Next step:** retry the signup after ~24 hours at
-https://workspace.google.com/business/signup/welcome → *Create a new account* → existing
-domain `dlvh.ae` → username `info` → **Business Starter**, not Standard (the first attempt
-defaulted to Standard at €16.20/user/month; Starter is roughly half).
+### Setup history, in case it has to be redone
 
-If it is still blocked after 24 hours: reset the password of the stranded account — recovery
-goes to `kozhinov.i@gmail.com` — and remove the domain from it, or use Google's contact form
-(48-hour response). See https://support.google.com/a/answer/80610
+The first attempt signed up on a personal Gmail. Google refuses custom domains for
+members of a **family group**, and that account is the family manager with a supervised
+child account in it — the only escape Google offered was deleting the entire family
+group, which would drop Family Link parental controls and impose a 12-month block on
+joining any family group. Rejected; that trial was cancelled and its org deleted, with
+no charge.
 
-Once the account exists, remaining work is DNS only: verification TXT, MX to Google, SPF,
-DKIM, and DMARC at `p=none`.
+The correct route is *Create a new account* at signup, **not** *Continue with this
+account*. Note that an abandoned signup holds the domain for up to 24 hours, which is
+what caused a "this domain name is already in use" error in between.
 
-**Unresolved risk:** AEserver's DNS panel offers TXT only as "SPF (txt)", and Google's DKIM
-key runs to roughly 400 characters. Whether the field accepts it is untested — the AEserver
-session expired before the test could run twice. If it does not fit, move the nameservers to
-Cloudflare: free, and the site's A/CNAME records move across with it.
-
-Note: the AEserver client-area session expires after a few minutes of inactivity and has to
-be signed in again by hand.
-
-### Why the registrar's own forwarding was abandoned
-
-AEserver's built-in **Email Forwarding** (domain → Email Forwarding in the client
-area) silently discards the record: the form accepts `info` → destination address,
-reports nothing on save, and the field is empty again after a reload. Tried three
-times, including plain keyboard entry rather than scripted input. No MX record is
-created for the domain (`dig dlvh.ae MX` returns nothing). The underlying DNS
-platform does support forwarding — it creates the MX automatically via an internal
-X-SMTP pseudo-record — so this is a fault in AEserver's panel, not a
-misconfiguration.
-
-A support ticket to AEserver would be the free route, since the bug is theirs. It was not
-pursued because Google Workspace was chosen instead — forwarding would still leave outgoing
-mail signed by `gmail.com` rather than `dlvh.ae`.
-
-Fallback if Workspace stays blocked: **Cloudflare Email Routing** — free, unlimited
-addresses, reliable. Needs a Cloudflare account and the nameservers moved from AEserver;
-the site's A/CNAME records move across with it. Receiving would work, but sending from
-Gmail as an alias would still be DKIM-signed by `gmail.com`, so DMARC would not align —
-keep DMARC unset or at `p=none` in that case.
+Google also warns that a DKIM key cannot be generated until 24–72 hours after Gmail is
+enabled. In practice it generated immediately — try it before waiting.
 
 ---
 
@@ -141,7 +117,7 @@ The form has **no delivery key set**, so submitting it opens the visitor's own m
 application with the message pre-filled to `info@dlvh.ae`. Functional, but many
 visitors have no mail client configured.
 
-To finish (do this after email receiving works, since the key arrives by email):
+To finish:
 
 1. https://web3forms.com → enter `info@dlvh.ae` → request an access key. Free,
    unlimited submissions, no account.
