@@ -540,7 +540,8 @@ a { color: inherit; }
   gap: 1.1rem;
   margin: 0 0 1rem;
 }
-.card-marks img { display: block; width: auto; }
+.card-marks img { display: block; height: 2.2rem; width: auto; }
+.footer-payments .card-marks img { height: 1.4rem; }
 .footer-payments {
   margin-top: 1.4rem;
   padding-top: 1.2rem;
