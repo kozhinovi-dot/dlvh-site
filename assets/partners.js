@@ -177,6 +177,14 @@
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
     blocks.forEach(function (el) { io.observe(el); });
+
+    /* Страховка. Если наблюдатель по какой-то причине не сработает — вкладка
+       открыта в фоне, экзотический браузер, что угодно — блоки всё равно
+       проявятся. На брошюрной странице этим можно пренебречь, на странице
+       сбора заявок пустой экран стоит денег. */
+    setTimeout(function () {
+      blocks.forEach(function (el) { el.classList.add('is-visible'); });
+    }, 1200);
   }
 
   var year = document.getElementById('year');
