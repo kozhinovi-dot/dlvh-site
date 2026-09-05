@@ -1,0 +1,320 @@
+/* Diamond Line — B2B-раздел /partners.
+   Догружается только на страницах партнёров. Базовые токены, сетка, кнопки и
+   поля берутся из styles.css: раздел должен выглядеть частью сайта, а не
+   отдельным лендингом. */
+
+/* ---------- Метка раздела в шапке ---------- */
+
+.nav-b2b { color: var(--brass) !important; }
+
+.b2b-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.12rem 0.4rem;
+  border: 1px solid var(--brass-dim);
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: var(--brass);
+  vertical-align: 0.15em;
+}
+
+/* ---------- Герой раздела ---------- */
+
+.hero-b2b { min-height: min(72vh, 640px); }
+
+.hero-b2b .hero-lede { max-width: 52ch; font-size: clamp(1.05rem, 1rem + 0.4vw, 1.28rem); }
+
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem 1.1rem;
+  margin: clamp(2rem, 5vh, 2.8rem) 0 0;
+}
+
+.btn-ghost {
+  justify-self: start;
+  display: inline-block;
+  font: inherit;
+  font-size: 0.76rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--brass);
+  background: transparent;
+  border: 1px solid var(--brass-dim);
+  padding: 0.85rem 2rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.btn-ghost:hover { border-color: var(--brass); color: #dcbc7c; }
+
+a.btn { display: inline-block; text-decoration: none; }
+
+/* ---------- Карточки ---------- */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+}
+
+.card { background: var(--ink); padding: 1.6rem 1.5rem; }
+.section-alt .card { background: var(--ink-2); }
+
+.card h3 {
+  margin: 0 0 0.6rem;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.06rem;
+  letter-spacing: 0.01em;
+}
+
+.card p { margin: 0; color: var(--text-dim); font-size: 0.93rem; line-height: 1.6; }
+
+.card-num {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-family: var(--serif);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  color: var(--brass-dim);
+}
+
+/* ---------- Шаги процесса ---------- */
+
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+
+.steps li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr);
+  gap: 0 1.1rem;
+  padding-block: 1.15rem;
+  border-bottom: 1px solid var(--line);
+}
+.steps li:first-child { border-top: 1px solid var(--line); }
+
+.steps li::before {
+  content: counter(step, decimal-leading-zero);
+  font-family: var(--serif);
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  color: var(--brass-dim);
+  padding-top: 0.3rem;
+}
+
+.steps strong {
+  display: block;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.04rem;
+  margin-bottom: 0.25rem;
+}
+
+.steps span { color: var(--text-dim); font-size: 0.93rem; line-height: 1.6; }
+
+/* ---------- Список с засечками ---------- */
+
+.ticks { list-style: none; margin: 0 0 1.5rem; padding: 0; }
+
+.ticks li {
+  position: relative;
+  padding-left: 1.6rem;
+  margin-bottom: 0.7rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.ticks li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 0.65rem;
+  height: 1px;
+  background: var(--brass);
+}
+
+/* ---------- FAQ ---------- */
+
+.faq { border-top: 1px solid var(--line); }
+
+.faq details { border-bottom: 1px solid var(--line); }
+
+.faq summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 1.15rem 2.5rem 1.15rem 0;
+  position: relative;
+  font-family: var(--serif);
+  font-size: 1.02rem;
+  line-height: 1.45;
+}
+.faq summary::-webkit-details-marker { display: none; }
+
+.faq summary::after {
+  content: "+";
+  position: absolute;
+  right: 0.35rem;
+  top: 1.05rem;
+  color: var(--brass);
+  font-size: 1.1rem;
+  transition: transform 0.2s ease;
+}
+.faq details[open] summary::after { content: "\2212"; }
+
+.faq summary:hover { color: var(--brass); }
+
+.faq .faq-body {
+  padding: 0 2.5rem 1.35rem 0;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.faq .faq-body p { margin: 0 0 0.75rem; }
+.faq .faq-body p:last-child { margin-bottom: 0; }
+
+/* ---------- Форма заявки ---------- */
+
+.form-b2b { display: grid; gap: 1.1rem; max-width: 640px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1.1rem;
+}
+
+.field select {
+  width: 100%;
+  font: inherit;
+  font-size: 0.97rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0.8rem 0.9rem;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--brass-dim) 50%),
+                    linear-gradient(135deg, var(--brass-dim) 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% + 2px), calc(100% - 13px) calc(50% + 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.field select:focus { outline: none; border-color: var(--brass); background-color: #1b2127; }
+
+.field-note {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  opacity: 0.8;
+}
+
+.form-optional {
+  border: 1px solid var(--line-soft);
+  padding: 0;
+}
+
+.form-optional > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.9rem 1.1rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  position: relative;
+}
+.form-optional > summary::-webkit-details-marker { display: none; }
+.form-optional > summary::after {
+  content: "+";
+  position: absolute;
+  right: 1.1rem;
+  top: 0.8rem;
+  color: var(--brass);
+}
+.form-optional[open] > summary::after { content: "\2212"; }
+.form-optional[open] > summary { border-bottom: 1px solid var(--line-soft); color: var(--brass); }
+
+.form-optional-body { display: grid; gap: 1.1rem; padding: 1.3rem 1.1rem; }
+
+.form-legal {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+  opacity: 0.85;
+  max-width: 58ch;
+}
+
+.form-ok {
+  border: 1px solid var(--brass-dim);
+  padding: 1.5rem 1.4rem;
+  background: var(--ink-2);
+}
+.form-ok h3 {
+  margin: 0 0 0.5rem;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.15rem;
+  color: var(--brass);
+}
+.form-ok p { margin: 0 0 0.5rem; color: var(--text-dim); font-size: 0.95rem; }
+.form-ok p:last-child { margin: 0; }
+.form-ok code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Языковой переключатель ---------- */
+
+.lang-switch {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.lang-switch a { color: var(--brass); text-decoration: none; border-bottom: 1px solid var(--brass-dim); }
+.lang-switch span[aria-current] { color: var(--text); }
+
+/* ---------- Таблица условий ---------- */
+
+.terms-table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+
+.terms-table th,
+.terms-table td {
+  text-align: left;
+  padding: 0.85rem 0.9rem 0.85rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.94rem;
+  vertical-align: top;
+}
+
+.terms-table th {
+  width: 38%;
+  font-weight: 400;
+  font-family: var(--serif);
+  color: var(--text);
+}
+.terms-table td { color: var(--text-dim); }
+
+@media (max-width: 520px) {
+  .terms-table th, .terms-table td { display: block; width: auto; border: none; padding-bottom: 0.2rem; }
+  .terms-table td { padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+}
+
+/* ---------- Защита от «пустой страницы» ----------
+   В styles.css у .reveal opacity:0 до срабатывания IntersectionObserver.
+   На брошюрной главной это терпимо, на странице, которая собирает заявки, — нет:
+   если скрипт не выполнится, посетитель увидит пустоту. Поэтому здесь по
+   умолчанию всё видимо, и анимация включается только когда JS реально работает
+   (класс js ставится инлайновым скриптом в <head>). */
+.reveal { opacity: 1; transform: none; }
+html.js .reveal { opacity: 0; transform: translateY(14px); }
+html.js .reveal.is-visible { opacity: 1; transform: none; }
