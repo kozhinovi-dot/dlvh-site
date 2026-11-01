@@ -46,10 +46,22 @@
     return firstInvalid;
   }
 
+  var TOPICS = {
+    guest: 'Guest',
+    owner: 'Property owner',
+    partner: 'Travel partner',
+    other: 'Other'
+  };
+
+  function subjectFor(data) {
+    return 'Website enquiry (' + (TOPICS[data.topic] || 'Other') + ') — ' + data.name;
+  }
+
   function sendViaMailClient(data) {
-    var subject = 'Website enquiry — ' + data.name;
+    var subject = subjectFor(data);
     var body = 'Name: ' + data.name + '\n' +
-               'Email: ' + data.email + '\n\n' +
+               'Email: ' + data.email + '\n' +
+               'Writing as: ' + (TOPICS[data.topic] || 'Other') + '\n\n' +
                data.message + '\n';
     window.location.href = 'mailto:' + CONTACT_EMAIL +
       '?subject=' + encodeURIComponent(subject) +
@@ -69,10 +81,11 @@
       },
       body: JSON.stringify({
         access_key: FORM_ACCESS_KEY,
-        subject: 'Website enquiry — ' + data.name,
+        subject: subjectFor(data),
         from_name: 'dlvh.ae',
         name: data.name,
         email: data.email,
+        writing_as: TOPICS[data.topic] || 'Other',
         message: data.message
       })
     })
@@ -116,6 +129,7 @@
       var data = {
         name: fields.name.value.trim(),
         email: fields.email.value.trim(),
+        topic: form.elements.topic ? form.elements.topic.value : 'other',
         message: fields.message.value.trim()
       };
 
@@ -134,6 +148,35 @@
           el.setAttribute('aria-invalid', 'false');
         }
       });
+    });
+  }
+
+  /* Links such as "Discuss your apartment" preselect the enquiry topic. */
+  document.querySelectorAll('a[data-topic]').forEach(function (link) {
+    link.addEventListener('click', function () {
+      var select = form && form.elements.topic;
+      if (select) select.value = link.getAttribute('data-topic');
+    });
+  });
+
+  /* ---------- Mobile menu ---------- */
+
+  var toggle = document.querySelector('.nav-toggle');
+  var nav = document.getElementById('site-nav');
+
+  if (toggle && nav) {
+    var setOpen = function (open) {
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      nav.classList.toggle('is-open', open);
+    };
+    toggle.addEventListener('click', function () {
+      setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    });
+    nav.addEventListener('click', function (event) {
+      if (event.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') setOpen(false);
     });
   }
 

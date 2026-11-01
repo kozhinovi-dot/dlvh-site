@@ -1,6 +1,6 @@
 # dlvh.ae — Diamond Line Vacation Homes Rental L.L.C.
 
-Static one-page corporate site. No build step, no dependencies, no framework.
+Static corporate site: a full home page plus rates, partner (B2B) and policy pages. No build step, no dependencies, no framework.
 Plain HTML + CSS + a single vanilla JS file.
 
 **Live:** https://dlvh.ae — deployed from this repository via GitHub Pages.
@@ -131,12 +131,17 @@ registered it, so it is safe in frontend code. The form already has a honeypot f
 
 ## Editorial note
 
-The copy is deliberately plain: what the company is, what it does, where it is, how
-to reach it. No claims about standards, licensing or quality, no selling. If anything
-is added later, keep it to verifiable facts — the point of the site is that someone
-who receives an email from `info@dlvh.ae` can check that the company exists.
+On 1 November 2026 the owner asked for the home page to be as full as the other
+company's site, while making sure nobody takes the two for the same company. So the
+home page now has: at-a-glance facts, company, services, process, owners, guests,
+apartments, operating standards, partners and contact — in Diamond Line's own
+graphite-and-brass look, with its own wording and its own photographs. Do not link to,
+name or borrow copy, imagery, phone numbers or social accounts from any other company.
 
-No phone number appears anywhere on the site, by request. Do not add one — or a
-WhatsApp button — without asking.
+Keep every statement verifiable: no founding year, unit counts, star ratings or
+testimonials unless the owner supplies them. Prices on the home page cards must match
+`rates.html`.
 
-Optional, if wanted: the office unit number in Opus by Omniyat.
+Contact details are the email `info@dlvh.ae` and the office address (Opus by Omniyat,
+Business Bay) — nothing else, by the owner's request. No phone number, WhatsApp button
+or social links without asking.
