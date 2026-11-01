@@ -878,68 +878,6 @@ a.btn { display: inline-block; text-decoration: none; text-align: center; }
   transform: rotate(-45deg);
 }
 
-/* Apartments */
-
-.homes {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(1rem, 3vw, 2rem);
-}
-
-.home-card {
-  display: flex;
-  flex-direction: column;
-  text-decoration: none;
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  transition: border-color 0.25s ease, transform 0.25s ease;
-}
-.home-card:hover { border-color: var(--brass-dim); transform: translateY(-3px); }
-
-.home-media { overflow: hidden; }
-.home-media img {
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-  filter: saturate(0.92);
-  transition: transform 0.6s ease;
-}
-.home-card:hover .home-media img { transform: scale(1.03); }
-
-.home-body { padding: 1.4rem 1.5rem 1.6rem; }
-
-.home-place {
-  margin: 0 0 0.4rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--brass);
-}
-
-.home-body h3 {
-  margin: 0 0 0.5rem;
-  font-family: var(--serif);
-  font-size: 1.35rem;
-}
-
-.home-specs { margin: 0 0 1.1rem; font-size: 0.9rem; color: var(--text-dim); }
-
-.home-price {
-  margin: 0;
-  padding-top: 1rem;
-  border-top: 1px solid var(--line);
-  font-size: 0.85rem;
-  color: var(--text-dim);
-}
-.home-price strong { font-family: var(--serif); font-weight: 500; font-size: 1.2rem; color: var(--text); }
-
-.homes-note { margin: 1.6rem 0 0; font-size: 0.88rem; color: var(--text-dim); }
-.homes-note a { color: var(--brass); margin-left: 0.4rem; }
-
-@media (max-width: 760px) {
-  .homes { grid-template-columns: 1fr; }
-}
-
 /* Standards */
 
 .standards {
@@ -1006,6 +944,3 @@ a.btn { display: inline-block; text-decoration: none; text-align: center; }
   background-repeat: no-repeat;
 }
 .field select:focus { outline: none; border-color: var(--brass); }
-
-/* Keep the bedroom and the window in frame when the photo is cropped */
-.split-media-room img { object-position: 74% 50%; }
