@@ -1,5 +1,5 @@
 // Diamond Line Owner Portal — single-page app (owner and staff views).
-import { api, IS_DEMO, NOT_CONFIGURED, AUTH_LINK_TYPE, monthRange } from "./data.js?v=8";
+import { api, IS_DEMO, NOT_CONFIGURED, AUTH_LINK_TYPE, monthRange } from "./data.js?v=9";
 
 const $ = (s, el = document) => el.querySelector(s);
 const app = $("#app");
@@ -537,11 +537,16 @@ async function adminHome() {
   const invite = (name = "", email = "") => modal("Invite owner", `
     <div class="form"><div class="field"><label>Full name (as in passport)</label><input id="iv-name" value="${esc(name)}"></div>
     <div class="field"><label>Email</label><input id="iv-email" type="email" value="${esc(email)}"></div>
-    <p class="small muted">You get a personal link to send to the owner (WhatsApp or email). It opens the portal and asks them to create a password.</p></div>`,
-    [{ label: "Cancel", cls: "btn-ghost" }, { label: "Create access link", onClick: async (m) => {
-      const r = await api.inviteOwner($("#iv-name", m).value.trim(), $("#iv-email", m).value.trim());
-      $(".body", m).innerHTML = `<p>Send this link to the owner. It works once.</p><div class="field"><input id="lnk" readonly value="${esc(r.link)}"></div><button class="btn btn-ghost btn-sm" id="cp" style="margin-top:8px">Copy link</button>`;
-      $("#cp", m).onclick = () => { navigator.clipboard.writeText(r.link); toast("Link copied"); };
+    <p class="small muted">We email the owner a personal link from info@dlvh.ae. It opens the portal and asks them to create a password.</p></div>`,
+    [{ label: "Cancel", cls: "btn-ghost" }, { label: "Send invitation", onClick: async (m) => {
+      const email = $("#iv-email", m).value.trim();
+      $(".body", m).insertAdjacentHTML("beforeend", `<div class="notice info" id="iv-wait">Sending the invitation from info@dlvh.ae…</div>`);
+      const r = await api.inviteOwner($("#iv-name", m).value.trim(), email);
+      $(".body", m).innerHTML = r.emailed
+        ? `<div class="notice ok">Invitation emailed to <b>${esc(email)}</b> from info@dlvh.ae.</div><p class="small muted" style="margin-top:12px">You can also send this personal link yourself (WhatsApp). It works once, within 24 hours.</p><div class="field"><input id="lnk" readonly value="${esc(r.link)}"></div><button class="btn btn-ghost btn-sm" id="cp" style="margin-top:8px">Copy link</button>`
+        : `<div class="notice brass">The invitation is queued and will be emailed to <b>${esc(email)}</b> shortly.</div>`;
+      const cp = $("#cp", m);
+      if (cp) cp.onclick = () => { navigator.clipboard.writeText(r.link).then(() => toast("Link copied"), () => $("#lnk", m).select()); };
       $(".foot", m).innerHTML = ""; const done = document.createElement("button"); done.className = "btn"; done.textContent = "Done"; done.onclick = () => { m.remove(); route(); }; $(".foot", m).appendChild(done);
       return false;
     } }]);

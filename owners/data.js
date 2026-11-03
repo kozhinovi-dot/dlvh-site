@@ -10,7 +10,7 @@ export const NOT_CONFIGURED = !CFG.supabaseUrl && !LOCAL;
 export const AUTH_LINK_TYPE = new URLSearchParams(location.hash.replace(/^#/, "")).get("type");
 
 let sb = null;
-const DEMO = IS_DEMO ? (await import("./demo.js?v=8")).DEMO : null;
+const DEMO = IS_DEMO ? (await import("./demo.js?v=9")).DEMO : null;
 if (!IS_DEMO && !NOT_CONFIGURED) {
   const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm");
   sb = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
@@ -79,11 +79,16 @@ const live = {
   // ---- staff ----
   owners: async () => must(await sb.from("profiles").select("*").order("full_name")),
   allProperties: async () => must(await sb.from("properties").select("*, owner:profiles(full_name,email)").order("name")),
+  // Staff request an invitation; the mail relay creates the link and emails it from info@dlvh.ae (usually within a minute).
   inviteOwner: async (full_name, email) => {
-    const { data, error } = await sb.functions.invoke("admin-invite", { body: { full_name, email } });
-    if (error) throw new Error(error.message);
-    if (data.error) throw new Error(data.error);
-    return data;
+    const row = must(await sb.from("invites").insert({ full_name, email }).select().single());
+    for (let i = 0; i < 40; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      const cur = must(await sb.from("invites").select("status, link, error").eq("id", row.id).single());
+      if (cur.status === "sent") return { link: cur.link, emailed: true };
+      if (cur.status === "failed") throw new Error(cur.error || "invitation failed");
+    }
+    return { link: null, emailed: false, queued: true };
   },
   saveProperty: async (row, photo) => {
     const saved = must(await sb.from("properties").upsert(row).select().single());
