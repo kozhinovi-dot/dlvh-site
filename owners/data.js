@@ -10,7 +10,7 @@ export const NOT_CONFIGURED = !CFG.supabaseUrl && !LOCAL;
 export const AUTH_LINK_TYPE = new URLSearchParams(location.hash.replace(/^#/, "")).get("type");
 
 let sb = null;
-const DEMO = IS_DEMO ? (await import("./demo.js?v=6")).DEMO : null;
+const DEMO = IS_DEMO ? (await import("./demo.js?v=8")).DEMO : null;
 if (!IS_DEMO && !NOT_CONFIGURED) {
   const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm");
   sb = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
@@ -85,7 +85,13 @@ const live = {
     if (data.error) throw new Error(data.error);
     return data;
   },
-  saveProperty: async (row) => must(await sb.from("properties").upsert(row).select().single()),
+  saveProperty: async (row, photo) => {
+    const saved = must(await sb.from("properties").upsert(row).select().single());
+    if (!photo) return saved;
+    const path = `${saved.owner_id}/${saved.id}-${Date.now()}-${safeName(photo.name)}`;
+    must(await sb.storage.from("photos").upload(path, photo, { contentType: photo.type || "image/jpeg" }));
+    return must(await sb.from("properties").update({ photo_path: path }).eq("id", saved.id).select().single());
+  },
   addBooking: async (row) => must(await sb.from("bookings").insert(row).select().single()),
   deleteBooking: async (id) => must(await sb.from("bookings").delete().eq("id", id)),
   addExpense: async (row, file, ownerId) => {

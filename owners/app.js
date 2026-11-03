@@ -1,5 +1,5 @@
 // Diamond Line Owner Portal — single-page app (owner and staff views).
-import { api, IS_DEMO, NOT_CONFIGURED, AUTH_LINK_TYPE, monthRange } from "./data.js?v=6";
+import { api, IS_DEMO, NOT_CONFIGURED, AUTH_LINK_TYPE, monthRange } from "./data.js?v=8";
 
 const $ = (s, el = document) => el.querySelector(s);
 const app = $("#app");
@@ -56,7 +56,8 @@ const friendly = (e) => {
 
 // ---------- Icons ----------
 const I = {
-  home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  home: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  unit: '<svg viewBox="0 0 24 24"><path d="M6 21V4h9v17M15 9h3v12M9 8h3M9 12h3M9 16h3M3 21h18"/></svg>',
   cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   doc: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg>',
   stmt: '<svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>',
@@ -87,16 +88,19 @@ async function counts() {
 async function shell(active, title, bodyHtml) {
   const c = isStaff() ? { sign: 0, approve: 0 } : await counts();
   const link = (href, icon, label, badge) => `<a href="${href}" class="${active === href ? "active" : ""}">${I[icon]}<span>${label}</span>${badge ? `<span class="badge">${badge}</span>` : ""}</a>`;
+  const p = prop();
   const nav = isStaff() ? `
       <div class="nav-label">Management</div>
       ${link("#/admin", "admin", "Owners & properties")}
       ${link("#/admin/payouts", "pay", "Payout queue")}
       <div class="nav-label">Owner view</div>
-      ${link("#/", "home", "Overview")}
+      ${link("#/", "home", "All properties")}
+      ${p ? link("#/p/" + p.id, "unit", "Overview") : ""}
       ${link("#/calendar", "cal", "Calendar")}
       ${link("#/statements", "stmt", "Statements")}
       ${link("#/documents", "doc", "Documents")}` : `
-      ${link("#/", "home", "Overview")}
+      ${link("#/", "home", "My properties")}
+      ${p ? `<div class="nav-label">${esc(p.name)}</div>${link("#/p/" + p.id, "unit", "Overview")}` : ""}
       ${link("#/calendar", "cal", "Calendar & occupancy")}
       ${link("#/statements", "stmt", "Statements & payouts", c.approve)}
       ${link("#/expenses", "exp", "Expenses")}
@@ -191,10 +195,55 @@ function occupancy(bookings, period) {
   return { nights, pct: Math.round(100 * nights / daysIn(period)) };
 }
 
+const photoUrl = (p) => p.photo_path ? api.fileUrl("photos", p.photo_path).catch(() => null) : Promise.resolve(null);
+
+// Landing page: every unit the owner has with us, each opening its own card.
+async function propertiesPage() {
+  if (!state.props.length) return shell("#/", "My properties", `<div class="card empty">Your property will appear here once Diamond Line has set it up.</div>`);
+  const thisM = todayIso().slice(0, 7) + "-01";
+  const [from, to] = monthRange(thisM);
+  const docs = await api.documents();
+  const units = await Promise.all(state.props.map(async (p) => {
+    const [bookings, sts, photo] = await Promise.all([api.bookings(p.id), api.statements(p.id), photoUrl(p)]);
+    const occ = occupancy(bookings, thisM);
+    const income = bookings.filter(b => b.status === "confirmed" && b.check_out >= from && b.check_out < to).reduce((s, b) => s + +b.net, 0);
+    const latest = sts[0];
+    const toSign = docs.filter(d => d.property_id === p.id && d.status === "awaiting_signature").length;
+    const next = bookings.find(b => b.status === "confirmed" && b.check_in >= todayIso());
+    return { p, occ, income, latest, toSign, next, photo, awaiting: sts.filter(s => s.status === "published").reduce((s, x) => s + +x.balance, 0) };
+  }));
+  const total = units.reduce((s, u) => s + u.income, 0);
+  const awaiting = units.reduce((s, u) => s + u.awaiting, 0);
+  const first = (state.me.full_name || "").split(" ")[0];
+  await shell("#/", "", `
+    <div class="page-head"><div><h1>${first ? "Welcome, " + esc(first.charAt(0) + first.slice(1).toLowerCase()) : "My properties"}</h1><p>${units.length === 1 ? "Your property" : units.length + " properties"} managed by Diamond Line</p></div></div>
+    <div class="grid g3 kpis" style="margin-bottom:20px">
+      <div class="card card-pad kpi"><div class="label">Properties</div><div class="value">${units.length}</div><div class="sub">under management</div></div>
+      <div class="card card-pad kpi"><div class="label">Rental income · ${MONTHS_LONG[+thisM.slice(5, 7) - 1]}</div><div class="value">${aed(total).replace("AED ", "")}</div><div class="sub">AED, all properties</div></div>
+      <div class="card card-pad kpi"><div class="label">Awaiting your approval</div><div class="value">${awaiting ? aed(awaiting).replace("AED ", "") : "—"}</div><div class="sub">${awaiting ? "AED in published statements" : "nothing to approve"}</div></div>
+    </div>
+    <div class="units">${units.map(u => `
+      <a class="unit card" href="#/p/${u.p.id}">
+        <div class="unit-photo"${u.photo ? ` style="background-image:url('${esc(u.photo)}')"` : ""}>${u.photo ? "" : I.unit}
+          ${u.toSign ? `<span class="unit-flag">Signature needed</span>` : u.latest?.status === "published" ? `<span class="unit-flag">Statement to approve</span>` : ""}
+          ${u.p.photo_credit ? `<span class="unit-credit">${esc(u.p.photo_credit)}</span>` : ""}</div>
+        <div class="unit-body">
+          <h3>${esc(u.p.name)}</h3><p class="muted small">${esc(u.p.address || "")}</p>
+          <div class="unit-stats">
+            <div><span>Occupancy</span><b>${u.occ.pct}%</b></div>
+            <div><span>Income this month</span><b>${aed(u.income)}</b></div>
+            <div><span>Next stay</span><b>${u.next ? fmtDate(u.next.check_in) : "—"}</b></div>
+          </div>
+          <div class="unit-foot">${u.latest ? `${monthLabel(u.latest.period)} ${pill(u.latest.status)}` : `<span class="muted small">First statement on the 10th</span>`}<span class="unit-open">Open →</span></div>
+        </div>
+      </a>`).join("")}
+    </div>`);
+}
+
 async function overview() {
   const p = prop();
-  if (!p) return shell("#/", "Overview", `<div class="card empty">Your property will appear here once Diamond Line has set it up.</div>`);
-  const [bookings, sts, docs, bank] = await Promise.all([api.bookings(p.id), api.statements(p.id), api.documents(), api.bank(state.me.id)]);
+  if (!p) return propertiesPage();
+  const [bookings, sts, docs, bank, photo] = await Promise.all([api.bookings(p.id), api.statements(p.id), api.documents(), api.bank(state.me.id), photoUrl(p)]);
   const thisM = todayIso().slice(0, 7) + "-01";
   const occ = occupancy(bookings, thisM);
   const [from, to] = monthRange(thisM);
@@ -202,9 +251,13 @@ async function overview() {
   const upcoming = bookings.filter(b => b.status === "confirmed" && b.check_in >= todayIso()).slice(0, 5);
   const lastPaid = sts.find(s => s.status === "paid");
   const pending = sts.find(s => s.status === "published");
-  const toSign = docs.filter(d => d.status === "awaiting_signature");
-  await shell("#/", "", `
-    <div class="page-head"><div><h1>Welcome, ${esc((state.me.full_name || "").split(" ")[0] || "Owner")}</h1><p>${esc(p.name)}${p.address ? " · " + esc(p.address) : ""}</p></div></div>
+  const toSign = docs.filter(d => d.status === "awaiting_signature" && (!d.property_id || d.property_id === p.id));
+  await shell("#/p/" + p.id, "", `
+    <a href="#/" class="small">← ${state.props.length > 1 ? "All properties" : "My properties"}</a>
+    <div class="hero card"${photo ? ` style="background-image:linear-gradient(180deg, rgba(13,16,18,0) 35%, rgba(13,16,18,.78)), url('${esc(photo)}')"` : ""}>
+      <div class="hero-text"><h1>${esc(p.name)}</h1><p>${esc(p.address || "")}${p.area_sqm ? ` · ${+p.area_sqm} sq m` : ""}${p.parking ? ` · parking ${esc(p.parking)}` : ""}</p></div>
+      ${p.photo_credit ? `<span class="unit-credit">${esc(p.photo_credit)}</span>` : ""}
+    </div>
     ${!bank ? `<div class="notice brass" style="margin-bottom:14px">Add your bank details so we can send your payouts. <a href="#/bank"><b>Add payout details →</b></a></div>` : ""}
     ${toSign.map(d => `<div class="cta" style="margin-bottom:12px"><div><b>${esc(d.title)}</b> is ready for your signature.</div><a class="btn btn-brass" href="#/documents/${d.id}">Review & sign</a></div>`).join("")}
     ${pending ? `<div class="cta" style="margin-bottom:16px"><div><b>Statement for ${monthLabel(pending.period)}</b> — balance due to you <b>${aed(pending.balance)}</b>. Review and request your payout.</div><a class="btn btn-brass" href="#/statements/${pending.id}">Review statement</a></div>` : ""}
@@ -504,11 +557,13 @@ function propertyForm(owners, p = {}) {
     <div class="field"><label>Address</label><input id="pp-addr" value="${esc(p.address)}"></div>
     <div class="form cols"><div class="field"><label>Area, sq m</label><input id="pp-area" value="${esc(p.area_sqm)}"></div><div class="field"><label>Parking</label><input id="pp-park" value="${esc(p.parking)}"></div>
     <div class="field"><label>Title deed No.</label><input id="pp-deed" value="${esc(p.title_deed)}"></div><div class="field"><label>DET permit No.</label><input id="pp-permit" value="${esc(p.permit_no)}"></div>
-    <div class="field"><label>Fee, %</label><input id="pp-fee" value="${p.fee_rate ? Math.round(p.fee_rate * 100) : 10}"></div><div class="field"><label>Agreement date</label><input id="pp-date" type="date" value="${esc(p.agreement_date)}"></div></div></div>`,
+    <div class="field"><label>Fee, %</label><input id="pp-fee" value="${p.fee_rate ? Math.round(p.fee_rate * 100) : 10}"></div><div class="field"><label>Agreement date</label><input id="pp-date" type="date" value="${esc(p.agreement_date)}"></div>
+    <div class="field"><label>Building photo</label><input id="pp-photo" type="file" accept="image/*"><div class="hint">${p.photo_path ? "A photo is set. Choose a file to replace it." : "Exterior of the building, seen from a distance."}</div></div><div class="field"><label>Photo credit</label><input id="pp-credit" value="${esc(p.photo_credit)}" placeholder="© Diamond Line"></div></div></div>`,
     [{ label: "Cancel", cls: "btn-ghost" }, { label: "Save", onClick: async (m) => {
       const v = (s) => $(s, m).value.trim();
       await api.saveProperty({ ...(p.id ? { id: p.id } : {}), owner_id: v("#pp-owner"), name: v("#pp-name"), address: v("#pp-addr") || null, area_sqm: v("#pp-area") || null,
-        parking: v("#pp-park") || null, title_deed: v("#pp-deed") || null, permit_no: v("#pp-permit") || null, fee_rate: (+v("#pp-fee") || 10) / 100, agreement_date: v("#pp-date") || null });
+        parking: v("#pp-park") || null, title_deed: v("#pp-deed") || null, permit_no: v("#pp-permit") || null, fee_rate: (+v("#pp-fee") || 10) / 100, agreement_date: v("#pp-date") || null,
+        photo_credit: v("#pp-credit") || null }, $("#pp-photo", m).files[0] || null);
       toast("Property saved"); route();
     } }]);
 }
@@ -632,7 +687,8 @@ async function route() {
   try {
     const m = (re) => path.match(re);
     let r;
-    if (path === "/" ) return isStaff() && !state.props.length ? adminHome() : overview();
+    if (path === "/") return isStaff() && !state.props.length ? adminHome() : propertiesPage();
+    if ((r = m(/^\/p\/(.+)$/))) { if (state.props.find(x => x.id === r[1])) { state.propId = r[1]; localStorage.setItem("dl.prop", r[1]); } return overview(); }
     if (path === "/calendar") return calendar(params);
     if (path === "/statements") return statementsList();
     if ((r = m(/^\/statements\/(.+)$/))) return statementPage(r[1]);
@@ -647,7 +703,7 @@ async function route() {
     if (isStaff() && (r = m(/^\/admin\/p\/(.+)$/))) return adminProperty(r[1], params);
     location.hash = "#/";
   } catch (e) {
-    app.innerHTML = `<div class="content"><div class="notice err">Something went wrong: ${esc(friendly(e))}. <a href="#/">Back to overview</a></div></div>`;
+    app.innerHTML = `<div class="content"><div class="notice err">Something went wrong: ${esc(friendly(e))}. <a href="#/">Back to my properties</a></div></div>`;
   }
 }
 
