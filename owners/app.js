@@ -1,5 +1,5 @@
 // Diamond Line Owner Portal — single-page app (owner and staff views).
-import { api, IS_DEMO, NOT_CONFIGURED, AUTH_LINK_TYPE, monthRange } from "./data.js?v=9";
+import { api, IS_DEMO, NOT_CONFIGURED, AUTH_LINK_TYPE, monthRange } from "./data.js?v=10";
 
 const $ = (s, el = document) => el.querySelector(s);
 const app = $("#app");
@@ -142,9 +142,10 @@ function authLayout(inner) {
     <div class="auth-form"><div class="auth-card">${inner}</div></div>
   </div>`;
 }
-function loginPage(msg) {
+function loginPage(msg, err) {
   authLayout(`<h2>Owner sign in</h2><p class="muted">Use the email and password for your owner account.</p>
     ${msg ? `<div class="notice ok" style="margin-top:14px">${esc(msg)}</div>` : ""}
+    ${err ? `<div class="notice err" style="margin-top:14px">${esc(err)}</div>` : ""}
     <form class="form" id="f">
       <div class="field"><label>Email</label><input name="email" type="email" autocomplete="username" required></div>
       <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" required></div>
@@ -173,13 +174,13 @@ function setPasswordPage(kind) {
   authLayout(`<h2>${kind === "invite" ? "Welcome to Diamond Line" : "Set a new password"}</h2>
     <p class="muted">${kind === "invite" ? "Create a password for your owner account. You will use it with your email to sign in." : "Choose a new password for your account."}</p>
     <form class="form" id="f">
-      <div class="field"><label>New password</label><input name="p1" type="password" minlength="10" autocomplete="new-password" required><div class="hint">At least 10 characters.</div></div>
-      <div class="field"><label>Repeat password</label><input name="p2" type="password" minlength="10" autocomplete="new-password" required></div>
+      <div class="field"><label>New password</label><input name="p1" type="password" minlength="6" autocomplete="new-password" required><div class="hint">At least 6 characters.</div></div>
+      <div class="field"><label>Repeat password</label><input name="p2" type="password" minlength="6" autocomplete="new-password" required></div>
       <div id="err"></div><button class="btn" type="submit">Save password</button></form>`);
   $("#f").onsubmit = async (e) => {
     e.preventDefault(); const f = new FormData(e.target);
     if (f.get("p1") !== f.get("p2")) { $("#err").innerHTML = `<div class="notice err">Passwords do not match.</div>`; return; }
-    try { await api.setPassword(f.get("p1")); history.replaceState(null, "", location.pathname + "#/"); await boot(); toast("Password saved"); }
+    try { await api.setPassword(f.get("p1")); state.mustSetPassword = null; history.replaceState(null, "", location.pathname + "#/"); await boot(); toast("Password saved"); }
     catch (err) { $("#err").innerHTML = `<div class="notice err">${esc(friendly(err))}</div>`; }
   };
 }
@@ -508,8 +509,8 @@ async function accountPage() {
         <div class="row"><span class="muted">Email</span><span>${esc(state.me.email)}</span></div></div>
         <p class="small muted" style="margin-top:14px">To change your name or email, write to <a href="mailto:info@dlvh.ae">info@dlvh.ae</a>.</p></div>
       <div class="card card-pad"><h3>Change password</h3>
-        <form class="form" id="pf"><div class="field"><label>New password</label><input name="p1" type="password" minlength="10" autocomplete="new-password" required></div>
-        <div class="field"><label>Repeat password</label><input name="p2" type="password" minlength="10" autocomplete="new-password" required></div><div id="err"></div>
+        <form class="form" id="pf"><div class="field"><label>New password</label><input name="p1" type="password" minlength="6" autocomplete="new-password" required></div>
+        <div class="field"><label>Repeat password</label><input name="p2" type="password" minlength="6" autocomplete="new-password" required></div><div id="err"></div>
         <button class="btn" type="submit">Update password</button></form></div>
     </div>`);
   $("#pf").onsubmit = async (e) => {
@@ -683,11 +684,15 @@ function bindFiles() {
 // ---------- Router ----------
 async function route() {
   const raw = location.hash.replace(/^#/, "") || "/";
-  if (/access_token|error_description/.test(raw)) return; // auth fragment, handled by the client
+  if (/error_description/.test(raw)) {
+    history.replaceState(null, "", location.pathname);
+    return loginPage(null, "This link has expired or was already used. Use “Forgot your password?” to get a new one.");
+  }
   const [path, query = ""] = raw.split("?");
   const params = new URLSearchParams(query);
   if (path === "/reset") return resetPage();
   if (!state.session) return loginPage();
+  if (state.mustSetPassword) return setPasswordPage(state.mustSetPassword);
   if (path === "/set-password") return setPasswordPage(params.get("kind") || "recovery");
   try {
     const m = (re) => path.match(re);
@@ -715,6 +720,8 @@ async function route() {
 async function boot() {
   if (NOT_CONFIGURED) { app.innerHTML = `<div class="content"><h1>Owner Portal</h1><p class="muted">The portal is being set up. Please contact <a href="mailto:info@dlvh.ae">info@dlvh.ae</a>.</p></div>`; return; }
   state.session = await api.session();
+  // Tokens from an email link have been read by the client by now; drop them from the address bar.
+  if (/access_token/.test(location.hash)) history.replaceState(null, "", location.pathname + "#/");
   if (state.session) {
     state.me = await api.me();
     state.props = await api.properties();
@@ -724,13 +731,15 @@ async function boot() {
 }
 
 window.addEventListener("hashchange", route);
+// An invite or password-reset link signs the user in; ask for a password once, right after it.
+state.mustSetPassword = AUTH_LINK_TYPE === "invite" || AUTH_LINK_TYPE === "recovery" ? AUTH_LINK_TYPE : null;
 if (!IS_DEMO && !NOT_CONFIGURED) {
-  api.onAuth(async (event, session) => {
-    if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && (AUTH_LINK_TYPE === "invite" || AUTH_LINK_TYPE === "recovery"))) {
-      state.session = session; state.me = await api.me().catch(() => null);
-      history.replaceState(null, "", location.pathname + "#/set-password?kind=" + (AUTH_LINK_TYPE === "invite" ? "invite" : "recovery"));
-      setPasswordPage(AUTH_LINK_TYPE === "invite" ? "invite" : "recovery");
-    }
+  // Supabase runs this inside its auth lock: no awaited Supabase calls here, only state updates.
+  // (It also reports SIGNED_IN every time the tab becomes visible again, so that event is ignored.)
+  api.onAuth((event, session) => {
+    if (event === "PASSWORD_RECOVERY") { state.session = session; state.mustSetPassword = "recovery"; setTimeout(route, 0); }
+    else if (event === "SIGNED_OUT") { state.session = null; state.me = null; setTimeout(route, 0); }
+    else if (session) state.session = session;
   });
 }
 boot();
