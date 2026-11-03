@@ -10,7 +10,7 @@ export const NOT_CONFIGURED = !CFG.supabaseUrl && !LOCAL;
 export const AUTH_LINK_TYPE = new URLSearchParams(location.hash.replace(/^#/, "")).get("type");
 
 let sb = null;
-const DEMO = IS_DEMO ? (await import("./demo.js?v=11")).DEMO : null;
+const DEMO = IS_DEMO ? (await import("./demo.js?v=12")).DEMO : null;
 if (!IS_DEMO && !NOT_CONFIGURED) {
   const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm");
   sb = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {

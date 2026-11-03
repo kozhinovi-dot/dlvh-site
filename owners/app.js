@@ -1,5 +1,5 @@
 // Diamond Line Owner Portal — single-page app (owner and staff views).
-import { api, IS_DEMO, NOT_CONFIGURED, AUTH_LINK_TYPE, monthRange } from "./data.js?v=11";
+import { api, IS_DEMO, NOT_CONFIGURED, AUTH_LINK_TYPE, monthRange } from "./data.js?v=12";
 
 const $ = (s, el = document) => el.querySelector(s);
 const app = $("#app");
@@ -222,6 +222,19 @@ function occupancy(bookings, period) {
 
 const photoUrl = (p) => p.photo_path ? api.fileUrl("photos", p.photo_path).catch(() => null) : Promise.resolve(null);
 
+// iPhone Safari clears site data after 7 days without a visit; a home-screen app keeps the sign-in.
+function homeScreenTip() {
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const standalone = window.navigator.standalone || matchMedia("(display-mode: standalone)").matches;
+  let dismissed = false;
+  try { dismissed = localStorage.getItem("dl.hstip") === "1"; } catch (e) {}
+  if (!ios || standalone || dismissed) return "";
+  setTimeout(() => { const x = $("#hstip-x"); if (x) x.onclick = () => { try { localStorage.setItem("dl.hstip", "1"); } catch (e) {} $("#hstip").remove(); }; }, 0);
+  return `<div class="notice brass" id="hstip" style="margin-bottom:16px; display:flex; gap:10px; align-items:flex-start; justify-content:space-between">
+    <span>Keep the portal one tap away and stay signed in: tap <b>Share</b> → <b>Add to Home Screen</b>.</span>
+    <a href="#" id="hstip-x" aria-label="Dismiss" style="color:inherit; text-decoration:none">✕</a></div>`;
+}
+
 // Landing page: every unit the owner has with us, each opening its own card.
 async function propertiesPage() {
   if (!state.props.length) return shell("#/", "My properties", `<div class="card empty">Your property will appear here once Diamond Line has set it up.</div>`);
@@ -241,6 +254,7 @@ async function propertiesPage() {
   const awaiting = units.reduce((s, u) => s + u.awaiting, 0);
   const first = (state.me.full_name || "").split(" ")[0];
   await shell("#/", "", `
+    ${homeScreenTip()}
     <div class="page-head"><div><h1>${first ? "Welcome, " + esc(first.charAt(0) + first.slice(1).toLowerCase()) : "My properties"}</h1><p>${units.length === 1 ? "Your property" : units.length + " properties"} managed by Diamond Line</p></div></div>
     <div class="grid g3 kpis" style="margin-bottom:20px">
       <div class="card card-pad kpi"><div class="label">Properties</div><div class="value">${units.length}</div><div class="sub">under management</div></div>
