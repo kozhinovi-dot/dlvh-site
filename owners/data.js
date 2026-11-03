@@ -10,7 +10,7 @@ export const NOT_CONFIGURED = !CFG.supabaseUrl && !LOCAL;
 export const AUTH_LINK_TYPE = new URLSearchParams(location.hash.replace(/^#/, "")).get("type");
 
 let sb = null;
-const DEMO = IS_DEMO ? (await import("./demo.js?v=10")).DEMO : null;
+const DEMO = IS_DEMO ? (await import("./demo.js?v=11")).DEMO : null;
 if (!IS_DEMO && !NOT_CONFIGURED) {
   const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm");
   sb = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
@@ -38,6 +38,8 @@ const live = {
   signOut: async () => { await sb.auth.signOut(); },
   sendReset: async (email) => must(await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname })),
   setPassword: async (password) => must(await sb.auth.updateUser({ password })),
+  // One-time links from emails land on our own page and are used only when the person presses Continue.
+  verifyLink: async (token_hash, type) => must(await sb.auth.verifyOtp({ token_hash, type })),
 
   me: async () => {
     const { data: { user } } = await sb.auth.getUser();

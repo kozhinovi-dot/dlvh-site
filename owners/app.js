@@ -1,5 +1,5 @@
 // Diamond Line Owner Portal — single-page app (owner and staff views).
-import { api, IS_DEMO, NOT_CONFIGURED, AUTH_LINK_TYPE, monthRange } from "./data.js?v=10";
+import { api, IS_DEMO, NOT_CONFIGURED, AUTH_LINK_TYPE, monthRange } from "./data.js?v=11";
 
 const $ = (s, el = document) => el.querySelector(s);
 const app = $("#app");
@@ -170,6 +170,30 @@ function resetPage() {
     catch (err) { $("#err").innerHTML = `<div class="notice err">${esc(friendly(err))}</div>`; }
   };
 }
+// Landing page for links from emails and chats. Link previews (WhatsApp, Telegram, mail scanners)
+// load the page but never press the button, so the one-time token survives until the person does.
+function acceptPage(params) {
+  const type = params.get("type") === "invite" ? "invite" : params.get("type") === "recovery" ? "recovery" : params.get("type") || "magiclink";
+  const invite = type === "invite";
+  authLayout(`<h2>${invite ? "Welcome to Diamond Line" : "Reset your password"}</h2>
+    <p class="muted">${invite ? "Your Owner Portal account is ready. Continue to create your password." : "Continue to choose a new password for your account."}</p>
+    <div id="err" style="margin-top:14px"></div>
+    <div class="form"><button class="btn" id="go">Continue</button></div>`);
+  $("#go").onclick = async () => {
+    $("#go").disabled = true;
+    try {
+      const r = await api.verifyLink(params.get("t"), type);
+      state.session = r.session;
+      state.mustSetPassword = type === "invite" ? "invite" : "recovery";
+      history.replaceState(null, "", location.pathname + "#/");
+      await boot();
+    } catch (e) {
+      $("#go").disabled = false;
+      $("#err").innerHTML = `<div class="notice err">This link has expired or was already used. Ask Diamond Line for a new one, or use “Forgot your password?” on the sign-in page.</div><p style="margin-top:12px"><a href="#/login">Go to sign in</a></p>`;
+    }
+  };
+}
+
 function setPasswordPage(kind) {
   authLayout(`<h2>${kind === "invite" ? "Welcome to Diamond Line" : "Set a new password"}</h2>
     <p class="muted">${kind === "invite" ? "Create a password for your owner account. You will use it with your email to sign in." : "Choose a new password for your account."}</p>
@@ -691,6 +715,7 @@ async function route() {
   const [path, query = ""] = raw.split("?");
   const params = new URLSearchParams(query);
   if (path === "/reset") return resetPage();
+  if (path === "/accept") return acceptPage(params);
   if (!state.session) return loginPage();
   if (state.mustSetPassword) return setPasswordPage(state.mustSetPassword);
   if (path === "/set-password") return setPasswordPage(params.get("kind") || "recovery");
